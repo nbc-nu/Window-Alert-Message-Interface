@@ -105,34 +105,27 @@
             };
         }
 
-        // CORREÇÃO: Salva como texto puro para que a extensão do TurboWarp consiga ler
-        function saveAnswer(value) {
-            // Convertendo booleanos ou dados estritos para string pura ("true", "false" ou o texto digitado)
-            const stringValue = String(value); 
-            
-            // Salva diretamente nas duas chaves possíveis para garantir compatibilidade com o bloco
-            localStorage.setItem('aviso', stringValue);
-            localStorage.setItem('answer', stringValue);
-        }
-
         function handleAction(value) {
+            let finalValue = value;
             if (value === 'ASK_SUBMIT') {
                 const inputEl = document.getElementById('user-input');
-                saveAnswer(inputEl ? inputEl.value : '');
-            } else {
-                saveAnswer(value);
-            }
-            
-            if (typeof nw !== 'undefined' && nw.Window) {
-                nw.Window.get().close();
-                return;
+                finalValue = inputEl ? inputEl.value : '';
             }
 
-            window.close();
+            // Descobre automaticamente o link do TurboWarp que abriu essa página
+            let returnUrl = document.referrer;
 
-            setTimeout(() => {
-                window.location.href = "about:blank";
-            }, 50);
+            // Se não encontrar o histórico (ex: aberto em aba isolada), usa o site padrão
+            if (!returnUrl || returnUrl.includes(window.location.hostname)) {
+                returnUrl = "https://turbowarp.org"; 
+            }
+
+            // Limpa parâmetros antigos da URL de retorno caso existam
+            const urlObj = new URL(returnUrl);
+            urlObj.searchParams.set('answer', String(finalValue));
+
+            // Redireciona de volta com o dado anexado na URL
+            window.location.href = urlObj.toString();
         }
 
         function initDialog() {
