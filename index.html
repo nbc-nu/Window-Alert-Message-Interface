@@ -112,20 +112,21 @@
                 finalValue = inputEl ? inputEl.value : '';
             }
 
-            // Descobre automaticamente o link do TurboWarp que abriu essa página
-            let returnUrl = document.referrer;
-
-            // Se não encontrar o histórico (ex: aberto em aba isolada), usa o site padrão
-            if (!returnUrl || returnUrl.includes(window.location.hostname)) {
-                returnUrl = "https://turbowarp.org"; 
+            // COMUNICAÇÃO DIRETA: Se o pop-up foi aberto pelo TurboWarp, injeta o dado de volta na aba original
+            if (window.opener) {
+                try {
+                    // Envia uma mensagem limpa para a aba principal escutar
+                    window.opener.postMessage({
+                        source: 'meu-aviso-customizado',
+                        answer: String(finalValue)
+                    }, '*');
+                } catch (e) {
+                    console.error("Erro ao enviar mensagem para a janela pai:", e);
+                }
             }
 
-            // Limpa parâmetros antigos da URL de retorno caso existam
-            const urlObj = new URL(returnUrl);
-            urlObj.searchParams.set('answer', String(finalValue));
-
-            // Redireciona de volta com o dado anexado na URL
-            window.location.href = urlObj.toString();
+            // Fecha o pop-up imediatamente após responder
+            window.close();
         }
 
         function initDialog() {
