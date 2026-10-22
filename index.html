@@ -12,48 +12,56 @@
         }
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            background-color: #ffffff; /* Fundo totalmente branco na página inteira */
+            background-color: #ffffff; /* Fundo 100% branco */
             color: #333333;
-            display: flex;
-            justify-content: center;
-            align-items: center;
             height: 100vh;
             width: 100vw;
             user-select: none;
             overflow: hidden;
-            padding: 20px;
-        }
-        .aviso-layout {
+            padding: 24px;
             display: flex;
             flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            text-align: center;
+            justify-content: space-between; /* Garante que os botões fiquem embaixo */
+        }
+        .aviso-conteudo {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
             width: 100%;
-            max-width: 500px;
-            gap: 24px;
         }
         .aviso-text {
-            font-size: 16px;
+            font-size: 15px;
             line-height: 1.5;
             color: #111111;
             word-break: break-word;
-            font-weight: 400;
+        }
+        .aviso-input {
+            width: 100%;
+            padding: 8px 12px;
+            font-size: 14px;
+            border: 1px solid #cccccc;
+            border-radius: 4px;
+            outline: none;
+            font-family: inherit;
+        }
+        .aviso-input:focus {
+            border-color: #0078d4;
         }
         .aviso-botoes {
             display: flex;
-            justify-content: center;
+            justify-content: flex-end; /* Alinha tudo no canto inferior direito */
             gap: 12px;
             width: 100%;
+            margin-top: 16px;
         }
         button {
-            padding: 8px 24px;
-            font-size: 14px;
+            padding: 6px 20px;
+            font-size: 13px;
             border-radius: 4px;
             cursor: pointer;
             outline: none;
             transition: background-color 0.1s ease;
-            min-width: 100px;
+            min-width: 80px;
             font-weight: 500;
         }
         button.btn-primary {
@@ -78,11 +86,13 @@
 </head>
 <body>
 
-    <div class="aviso-layout">
+    <div class="aviso-conteudo">
         <div id="message" class="aviso-text">Carregando...</div>
-        <div id="buttons-container" class="aviso-botoes">
-            <!-- Injetados dinamicamente via JavaScript -->
-        </div>
+        <div id="input-container"></div>
+    </div>
+
+    <div id="buttons-container" class="aviso-botoes">
+        <!-- Injetados via JS -->
     </div>
 
     <script>
@@ -90,7 +100,8 @@
             const params = new URLSearchParams(window.location.search);
             return {
                 text: params.get('text') || 'Sem texto definido.',
-                type: params.get('type') || 'texto'
+                type: params.get('type') || 'text',
+                placeholder: params.get('placeholder') || 'Digite sua resposta aqui...'
             };
         }
 
@@ -107,7 +118,13 @@
         }
 
         function handleAction(value) {
-            saveAnswer(value);
+            // Se for do tipo 'ask', captura o valor do input em vez de usar true/false
+            if (value === 'ASK_SUBMIT') {
+                const inputEl = document.getElementById('user-input');
+                saveAnswer(inputEl ? inputEl.value : '');
+            } else {
+                saveAnswer(value);
+            }
             
             if (typeof nw !== 'undefined' && nw.Window) {
                 nw.Window.get().close();
@@ -122,21 +139,49 @@
         }
 
         function initDialog() {
-            const { text, type } = getQueryParams();
+            const { text, type, placeholder } = getQueryParams();
             const messageEl = document.getElementById('message');
+            const inputContainer = document.getElementById('input-container');
             const buttonsContainer = document.getElementById('buttons-container');
 
             messageEl.textContent = text;
 
+            // Limpa os containers antes de renderizar
+            inputContainer.innerHTML = '';
+            buttonsContainer.innerHTML = '';
+
             switch (type.toLowerCase()) {
-                case 'confirma':
-                case 'pergunta':
+                case 'confirm':
                     buttonsContainer.innerHTML = `
-                        <button class="btn-secondary" onclick="handleAction(false)">Cancelar</button>
-                        <button class="btn-primary" onclick="handleAction(true)">Confirmar</button>
+                        <button class="btn-secondary" onclick="handleAction(false)">Cancel</button>
+                        <button class="btn-primary" onclick="handleAction(true)">OK</button>
                     `;
                     break;
-                case 'texto':
+                    
+                case 'ask':
+                    // Cria e injeta o campo de texto
+                    inputContainer.innerHTML = `
+                        <input type="text" id="user-input" class="aviso-input" placeholder="${placeholder}" autocomplete="off">
+                    `;
+                    buttonsContainer.innerHTML = `
+                        <button class="btn-primary" onclick="handleAction('ASK_SUBMIT')">OK</button>
+                    `;
+                    
+                    // Permite enviar apertando Enter dentro do input
+                    setTimeout(() => {
+                        const inputEl = document.getElementById('user-input');
+                        if (inputEl) {
+                            inputEl.focus();
+                            inputEl.addEventListener('keypress', function(e) {
+                                if (e.key === 'Enter') {
+                                    handleAction('ASK_SUBMIT');
+                                }
+                            });
+                        }
+                    }, 50);
+                    break;
+
+                case 'text':
                 default:
                     buttonsContainer.innerHTML = `
                         <button class="btn-primary" onclick="handleAction(true)">OK</button>
